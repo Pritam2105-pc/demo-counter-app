@@ -1,0 +1,69 @@
+pipeline{
+    
+    agent any 
+
+    parameter {
+        choice(name: 'action', choices: 'create\ndestroy\destroyekscluster', description: 'create/update or destroy the eks cluster')
+        string(name: 'cluster', defaultValue: 'demo-cluster', description: 'eks cluster name')
+        string(name: 'region', defaultValue: 'ap-south-1', description: 'eks cluster region')
+    }
+    environment{
+        ACCESS_KEY = credentials{'aws_access_key_id'}
+        SECRET_KEY = credentials{'aws_access_secret_key'}
+    }
+    
+    stages {
+        
+        stage('Git Checkout'){
+            
+            steps{
+                
+                script{
+                    
+                    git branch: 'main', url: 'https://github.com/vikash-kumar01/mrdevops_javaapplication.git'
+                }
+            }
+        }
+
+        stage('eks connect'){
+            
+            steps{
+                
+                script{
+                    
+                    sh """
+                    aws config set aws_access_key_id "$ACCESS_KEY"
+                    aws config set aws_access_secret_key "$SECRET_KEY"
+                    aws config set region ""
+                    aws eks --region ${params.region} update-kubeconfig --name ${params.cluster}  
+                    """
+                }
+            }
+        }
+
+        stage('eks deployment'){
+            when { expression { params.action == 'create'}}
+
+            steps{
+                
+                script{
+                    
+                   def apply = false
+                   try{
+                      input message: 'please confirm the apply to initiate the deployment' , ok: 'ready to apply the config'
+                      apply =true 
+                   }
+                   catch(err){
+                    apply = false
+                    CurrentBuild.result= 'UNSTABLE'
+                   }
+                   if(apply){
+
+                    sh """
+                        kubectl apply -f .
+                        """ 
+                   }
+            }
+        }
+    }
+}
