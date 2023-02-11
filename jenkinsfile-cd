@@ -3,7 +3,7 @@ pipeline{
     agent any 
 
     parameter {
-        choice(name: 'action', choices: 'create\ndestroy\destroyekscluster', description: 'create/update or destroy the eks cluster')
+        choice(name: 'action', choices: 'create\ndestroy\ndestroyekscluster', description: 'create/update or destroy the eks cluster')
         string(name: 'cluster', defaultValue: 'demo-cluster', description: 'eks cluster name')
         string(name: 'region', defaultValue: 'ap-south-1', description: 'eks cluster region')
     }
@@ -66,4 +66,31 @@ pipeline{
             }
         }
     }
+
+    stage('delete deployment'){
+            when { expression { params.action == 'destroy'}}
+
+            steps{
+                
+                script{
+                    
+                   def destroy = false
+                   try{
+                      input message: 'please confirm the destroy to delete the deployment' , ok: 'ready to destroy the config'
+                      destroy =true 
+                   }
+                   catch(err){
+                    destroy = false
+                    CurrentBuild.result= 'UNSTABLE'
+                   }
+                   if(destroy){
+
+                    sh """
+                        kubectl delete -f .
+                        """ 
+                   }
+            }
+        }
+    }
+}
 }
