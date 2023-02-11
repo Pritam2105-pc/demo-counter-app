@@ -94,6 +94,28 @@ pipeline{
                     }
                 } 
             }  
+            stage("Docker build Image"){
+                steps{
+                    script{
+                        sh 'docker image build -t $JOB_NAME:v1.$BUILD_ID'
+                        Sh 'docker image tag ranchodocker/$JOB_NAME:v1.$BUILD_ID'
+                        Sh 'docker image tag ranchodocker/$JOB_NAME:latest'
+                    }
+                }
+            }
+            stage('Docker build and push to Dockerhub') {
+            steps{
+                script{
+                     withCredentials([string(credentialsID: 'dockerhub_pwd', variable: 'docker_hub_creds')]) {
+                       sh 'docker login -u ranchodocker -p ${docker_creds}'
+                       sh 'docker image push ranchodocker/$JOB_NAME:v1.$BUILD_ID'
+                       sh 'docker image push ranchodocker/$JOB_NAME:latest' 
+                     }
+                   }
+                }
+           }
+            stage('')
+
         }
         
 }
